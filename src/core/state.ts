@@ -3,6 +3,7 @@ import type { PluginConfig } from '../types';
 import { DEFAULT_CONFIG } from '../config';
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { homedir } from 'node:os';
 
 class PluginState {
   config: PluginConfig = { ...DEFAULT_CONFIG };
@@ -65,7 +66,7 @@ class PluginState {
   }
 
   get savedDir(): string {
-    return join(this.dataPath, 'saved');
+    return join(homedir(), 'download', 'qq-msg');
   }
 
   // Logger helpers

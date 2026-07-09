@@ -3,6 +3,7 @@ var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { en
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 import { existsSync, mkdirSync, readFileSync, writeFileSync, createWriteStream, readdirSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
+import { homedir } from "node:os";
 import { get } from "node:http";
 import { get as get$1 } from "node:https";
 import { URL } from "node:url";
@@ -80,7 +81,7 @@ class PluginState {
     return this.config.enabled;
   }
   get savedDir() {
-    return join(this.dataPath, "saved");
+    return join(homedir(), "download", "qq-msg");
   }
   // Logger helpers
   log(...args) {
