@@ -1,0 +1,32 @@
+{
+  "name": "napcat-forward-processor",
+  "plugin": "转发处理",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.mjs",
+  "description": "合并转发命令处理插件 — /info /save /extract",
+  "author": "doge",
+  "license": "MIT",
+  "keywords": ["napcat", "plugin", "forward", "qq"],
+  "napcat": {
+    "tags": ["工具"],
+    "minVersion": "4.14.0",
+    "homepage": ""
+  },
+  "dependencies": {
+    "napcat-types": "0.0.16"
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^15.3.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^20.19.33",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.1"
+  },
+  "scripts": {
+    "build": "vite build",
+    "watch": "vite build --watch",
+    "dev": "vite build --watch",
+    "typecheck": "tsc --noEmit"
+  }
+}
