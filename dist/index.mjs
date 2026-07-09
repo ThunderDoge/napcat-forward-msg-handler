@@ -329,21 +329,56 @@ async function downloadMedia(segments, targetDir, ctx) {
   }
   return { ok, fail };
 }
+function collectAllMediaFromSegments(segments) {
+  var _a;
+  const result = [];
+  for (const seg of segments) {
+    if (MEDIA_TYPES.includes(seg.type)) {
+      result.push(seg);
+    } else if (seg.type === "forward") {
+      const nestedMsgs = ((_a = seg.data) == null ? void 0 : _a.content) || [];
+      for (const nestedMsg of nestedMsgs) {
+        const nestedSegs = nestedMsg.message || [];
+        result.push(...collectAllMediaFromSegments(nestedSegs));
+      }
+    }
+  }
+  return result;
+}
+function collectAllMediaFromNodes(nodes) {
+  const result = [];
+  for (const msg of nodes) {
+    const segments = msg.message || [];
+    result.push(...collectAllMediaFromSegments(segments));
+  }
+  return result;
+}
 function extractAllMediaFromNodes(nodes) {
-  var _a, _b, _c;
+  var _a;
   const media = [];
   for (const msg of nodes) {
     const nick = ((_a = msg.sender) == null ? void 0 : _a.nickname) || "未知";
     const segments = msg.message || [];
+    walkSegments(segments, nick);
+  }
+  function walkSegments(segments, sender) {
+    var _a2, _b, _c, _d;
     for (const seg of segments) {
       if (MEDIA_TYPES.includes(seg.type)) {
         media.push({
           index: media.length,
-          sender: nick,
-          url: ((_b = seg.data) == null ? void 0 : _b.url) || "",
-          fileSize: (_c = seg.data) == null ? void 0 : _c.file_size,
+          sender,
+          url: ((_a2 = seg.data) == null ? void 0 : _a2.url) || "",
+          fileSize: (_b = seg.data) == null ? void 0 : _b.file_size,
           type: seg.type
         });
+      } else if (seg.type === "forward") {
+        const nestedMsgs = ((_c = seg.data) == null ? void 0 : _c.content) || [];
+        for (const nestedMsg of nestedMsgs) {
+          const nestedSegs = nestedMsg.message || [];
+          const nestedNick = ((_d = nestedMsg.sender) == null ? void 0 : _d.nickname) || sender;
+          walkSegments(nestedSegs, nestedNick);
+        }
       }
     }
   }
@@ -426,15 +461,7 @@ async function handleSaveForward(ctx, event, repliedMsg, args) {
         };
       })
     }, null, 2), "utf-8");
-    const mediaSegments = [];
-    for (const node of nodes) {
-      const segs = node.message || [];
-      for (const s of segs) {
-        if (MEDIA_TYPES.includes(s.type)) {
-          mediaSegments.push(s);
-        }
-      }
-    }
+    const mediaSegments = collectAllMediaFromNodes(nodes);
     let downloaded = { ok: 0, fail: 0 };
     if (mediaSegments.length > 0) {
       downloaded = await downloadMedia(mediaSegments, savePath, ctx);
@@ -510,15 +537,7 @@ async function saveMessageToDisk(ctx, event) {
         totalMedia: allMedia.length,
         media: allMedia
       }, null, 2), "utf-8");
-      const forwardMediaSegments = [];
-      for (const node of nodes) {
-        const segs = node.message || [];
-        for (const s of segs) {
-          if (MEDIA_TYPES.includes(s.type)) {
-            forwardMediaSegments.push(s);
-          }
-        }
-      }
+      const forwardMediaSegments = collectAllMediaFromNodes(nodes);
       const downloaded = await downloadMedia(forwardMediaSegments, savePath, ctx);
       const counts = countMedia(forwardMediaSegments);
       return {

@@ -297,16 +297,8 @@ async function handleSaveForward(
       })),
     }, null, 2), 'utf-8');
 
-    // 下载转发中的所有媒体
-    const mediaSegments: OB11MessageData[] = [];
-    for (const node of nodes) {
-      const segs: OB11MessageData[] = (node as any).message || [];
-      for (const s of segs) {
-        if (MEDIA_TYPES.includes(s.type as typeof MEDIA_TYPES[number])) {
-          mediaSegments.push(s);
-        }
-      }
-    }
+    // 下载转发中的所有媒体（含嵌套转发）
+    const mediaSegments = collectAllMediaFromNodes(nodes);
     let downloaded = { ok: 0, fail: 0 };
     if (mediaSegments.length > 0) {
       downloaded = await downloadMedia(mediaSegments, savePath, ctx);
@@ -413,16 +405,8 @@ export async function saveMessageToDisk(
         totalMessages: nodes.length, totalMedia: allMedia.length, media: allMedia,
       }, null, 2), 'utf-8');
 
-      // 下载转发中的所有媒体
-      const forwardMediaSegments: OB11MessageData[] = [];
-      for (const node of nodes) {
-        const segs: OB11MessageData[] = (node as any).message || [];
-        for (const s of segs) {
-          if (MEDIA_TYPES.includes(s.type as typeof MEDIA_TYPES[number])) {
-            forwardMediaSegments.push(s);
-          }
-        }
-      }
+      // 下载转发中的所有媒体（含嵌套转发）
+      const forwardMediaSegments = collectAllMediaFromNodes(nodes);
       const downloaded = await downloadMedia(forwardMediaSegments, savePath, ctx);
       const counts = countMedia(forwardMediaSegments);
 
