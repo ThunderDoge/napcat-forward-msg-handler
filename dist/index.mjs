@@ -312,17 +312,19 @@ async function downloadMedia(segments, targetDir, ctx) {
       fail++;
       continue;
     }
-    let filename = ((_e = segments[i].data) == null ? void 0 : _e.name) || rawFile;
+    const filename = ((_e = segments[i].data) == null ? void 0 : _e.file) || rawFile;
+    const dest = join(targetDir, filename);
+    if (existsSync(dest)) {
+      pluginState.log(`[downloadMedia] 跳过 ${segType} — 已存在 ${filename}`);
+      ok++;
+      continue;
+    }
     if (usedNames.has(filename)) {
-      const dot = filename.lastIndexOf(".");
-      const base = dot > 0 ? filename.slice(0, dot) : filename;
-      const ext = dot > 0 ? filename.slice(dot) : "";
-      let n = 1;
-      while (usedNames.has(`${base}_${n}${ext}`)) n++;
-      filename = `${base}_${n}${ext}`;
+      pluginState.log(`[downloadMedia] 跳过 ${segType} — 同批次重复 ${filename}`);
+      ok++;
+      continue;
     }
     usedNames.add(filename);
-    const dest = join(targetDir, filename);
     const dl = await downloadFile(url, dest);
     if (dl) ok++;
     else fail++;

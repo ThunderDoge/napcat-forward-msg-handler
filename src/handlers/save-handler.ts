@@ -103,19 +103,23 @@ async function downloadMedia(
       fail++; continue;
     }
 
-    // 文件名处理：优先用 name（原始文件名），其次 file
-    let filename = segments[i].data?.name || rawFile;
+    // 文件名：使用 QQ 内部指纹名 (data.file)，相同内容天然去重
+    const filename = segments[i].data?.file || rawFile;
+    const dest = join(targetDir, filename);
+
+    // 同名文件已存在 → 内容相同，跳过
+    if (existsSync(dest)) {
+      pluginState.log(`[downloadMedia] 跳过 ${segType} — 已存在 ${filename}`);
+      ok++; continue;
+    }
+
+    // 同批次内同名 → 已下载或即将下载，跳过
     if (usedNames.has(filename)) {
-      const dot = filename.lastIndexOf('.');
-      const base = dot > 0 ? filename.slice(0, dot) : filename;
-      const ext = dot > 0 ? filename.slice(dot) : '';
-      let n = 1;
-      while (usedNames.has(`${base}_${n}${ext}`)) n++;
-      filename = `${base}_${n}${ext}`;
+      pluginState.log(`[downloadMedia] 跳过 ${segType} — 同批次重复 ${filename}`);
+      ok++; continue;
     }
     usedNames.add(filename);
 
-    const dest = join(targetDir, filename);
     const dl = await downloadFile(url, dest);
     if (dl) ok++; else fail++;
     if (i < segments.length - 1) await new Promise(r => setTimeout(r, 200));
