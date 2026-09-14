@@ -7,6 +7,7 @@ import { isReply, extractReplyId, parseCommand, extractTextFromSegments, hasSave
 import { sendReply, sendPlainText } from '../utils/reply-utils';
 import { getCommandHandler } from './command-registry';
 import { saveMessageToDisk } from './save-handler';
+import { collectorBatch } from '../core/collector-batch';
 
 /** 消息处理主入口 */
 export async function handleMessage(ctx: NapCatPluginContext, event: OB11Message): Promise<void> {
@@ -34,12 +35,13 @@ export async function handleMessage(ctx: NapCatPluginContext, event: OB11Message
       if (parsed.command === 'help') {
         const helpText = [
           '📋 转发处理插件 命令列表',
-          '━━━━━━━━━━━━━━━━━━━━',
+          '━━━━━━━━',
           '/help         — 显示此帮助',
           '/info         — 分析被回复消息的内容',
           '/save [dir]   — 保存转发/图片到本地（可选子目录）',
           '/extract      — 将转发释放到当前频道',
           '/colle on/off — Collector mode 自动保存',
+          '/disk         — 查看系统磁盘与内存余量',
           '',
           '用法：回复一条消息，然后输入命令',
         ].join('\n');
@@ -52,6 +54,16 @@ export async function handleMessage(ctx: NapCatPluginContext, event: OB11Message
       if (parsed.command === 'colle') {
         // 由 command-registry 的 handler 处理
         const handler = getCommandHandler('colle');
+        if (handler) {
+          const dummyReplied = { message: [], message_id: 0, user_id: 0, time: 0, message_type: 'private', sender: { user_id: 0, nickname: '' } } as OB11Message;
+          await handler(ctx, event, dummyReplied, parsed.args);
+        }
+        return;
+      }
+
+      // /disk 无需回复
+      if (parsed.command === 'disk') {
+        const handler = getCommandHandler('disk');
         if (handler) {
           const dummyReplied = { message: [], message_id: 0, user_id: 0, time: 0, message_type: 'private', sender: { user_id: 0, nickname: '' } } as OB11Message;
           await handler(ctx, event, dummyReplied, parsed.args);
@@ -113,15 +125,14 @@ export async function handleMessage(ctx: NapCatPluginContext, event: OB11Message
   }
 }
 
-/** Collector mode: 自动保存当前消息 */
+/** Collector mode: 自动保存当前消息（进批量队列，窗口结束后合并报告） */
 async function autoSaveCurrent(ctx: NapCatPluginContext, event: OB11Message): Promise<void> {
   const result = await saveMessageToDisk(ctx, event);
   if (!result) return;
   if (!result.ok) {
-    pluginState.log('Collector mode: 保存失败');
-    return;
+    pluginState.log('Collector mode: 保存失败，计入批量报告');
+  } else {
+    pluginState.log(`Collector mode: 已自动保存 (${result.type}, ${result.count})`);
   }
-
-  await sendPlainText(ctx, event, `▶️ collector mode ON\n${result.summaryLine}`);
-  pluginState.log(`Collector mode: 已自动保存 (${result.type}, ${result.count})`);
+  collectorBatch.push(ctx, event, result);
 }

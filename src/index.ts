@@ -23,6 +23,8 @@ import { handleMessage } from './handlers/message-handler';
 import { registerCommand } from './handlers/command-registry';
 import { handleSave } from './handlers/save-handler';
 import { handleExtract } from './handlers/extract-handler';
+import { handleDisk } from './handlers/disk-handler';
+import { collectorBatch } from './core/collector-batch';
 import { registerApiRoutes } from './services/api-service';
 import { sendReply, sendPlainText } from './utils/reply-utils';
 import { extractForwards, extractAllMedia } from './utils/message-utils';
@@ -66,6 +68,7 @@ export const plugin_onevent: PluginModule['plugin_onevent'] = async (_ctx, _even
 
 export const plugin_cleanup: PluginModule['plugin_cleanup'] = async (ctx) => {
   try {
+    collectorBatch.cleanup();
     pluginState.cleanup();
     ctx.logger.info('[Forward] 插件已卸载');
   } catch (e) {
@@ -96,11 +99,12 @@ function registerCommands(ctx: NapCatPluginContext): void {
   registerCommand('help', async (_ctx, event, _replied, _args) => {
     const helpText = [
       '📋 转发处理插件 命令列表',
-      '━━━━━━━━━━━━━━━━━━━━',
+      '━━━━━━━━',
       '/help         — 显示此帮助',
       '/info         — 分析被回复消息的内容',
       '/save [dir]   — 保存转发内容到本地（可选子目录）',
       '/extract      — 将转发释放到当前频道',
+      '/disk         — 查看系统磁盘与内存余量',
       '',
       '用法：回复一条合并转发消息，然后输入命令',
       '示例：回复转发消息 → 输入 /extract',
@@ -174,6 +178,7 @@ function registerCommands(ctx: NapCatPluginContext): void {
 
   registerCommand('save', handleSave);
   registerCommand('extract', handleExtract);
+  registerCommand('disk', handleDisk);
 
   // /colle on|off — Collector mode
   registerCommand('colle', async (ctx, event, _replied, args) => {
@@ -194,5 +199,5 @@ function registerCommands(ctx: NapCatPluginContext): void {
     }
   });
 
-  ctx.logger.info('[Forward] 已注册命令: help, info, save, extract, colle');
+  ctx.logger.info('[Forward] 已注册命令: help, info, save, extract, colle, disk');
 }
